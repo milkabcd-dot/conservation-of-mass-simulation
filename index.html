@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
@@ -55,7 +56,7 @@ const opts=[['grows','המסה גדלה'],['shrinks','המסה קטנה'],['same
 function predView(k,q){return `<h2>${q}</h2>${opts.map(o=>`<button class="opt ${pred[k]===o[0]?'sel':''}" data-k="${k}" data-v="${o[0]}">${o[1]}</button>`).join('')}<p class="fb" id="fb"></p>`}
 const steps=[
 ()=>`<h1>האם עיבוי ורתיחה משנים את המסה?</h1>
-<p>במעבדה מתכוננים לשני ניסויים. בכל ניסוי הכלי <b>אטום לגמרי</b>, והוא מונח על מאזניים מדוייקים. החומר הנבדק בתוך הכלי הוא מים.</p>
+<p>במעבדה מתכוננים לשני ניסויים. בכל ניסוי הכלי <b>אטום לגמרי</b>, והוא מונח על מאזניים מדוייקים.<br>בתוך הכלי נמצא החומר: מים.</p>
 <p><b>ניסוי א׳ – עיבוי:</b> בכלי יש אדי מים (גז). מקררים אותו, והאדים הופכים לטיפות מים במצב נוזל.</p>
 <p><b>ניסוי ב׳ – רתיחה:</b> בכלי יש מים נוזליים. מחממים אותם עד שהם רותחים והופכים לאדים: מים במצב גז.</p>
 <div class="note">שאלת החקר: מה קורה למסת הגז כשהוא עובר עיבוי? ומה קורה למסת הנוזל כשהוא עובר רתיחה?</div>`,
@@ -93,12 +94,12 @@ function startSim(m){const c=m==='c',cv=$('cv'),x=cv.getContext('2d'),sl=$('sl')
   if(meas[m].length>=3)$('fb').textContent='המסה נשארה '+M.toFixed(1)+' גרם בכל המדידות, בכל מצב צבירה.'};
  function frame(){x.clearRect(0,0,420,300);x.strokeStyle=ink;x.lineWidth=3;x.strokeRect(20,20,380,260);
   const n=Math.round(liq()*P.length);const top=272-n*400/364;const Lq=P.filter(p=>p.i<n);
-  for(let k=0;k<2;k++)for(let a=0;a<Lq.length;a++)for(let b=a+1;b<Lq.length;b++){const A=Lq[a],B=Lq[b];const dx=B.x-A.x,dy=B.y-A.y,d=Math.hypot(dx,dy)||.01;if(d<16){const s=(16-d)/2/d;A.x-=dx*s;A.y-=dy*s;B.x+=dx*s;B.y+=dy*s}}
-  Lq.forEach(p=>{p.x=Math.min(392,Math.max(28,p.x));p.y=Math.min(272,Math.max(28,p.y))});
+  for(let k=0;k<4;k++)for(let a=0;a<Lq.length;a++)for(let b=a+1;b<Lq.length;b++){const A=Lq[a],B=Lq[b];const dx=B.x-A.x,dy=B.y-A.y,d=Math.hypot(dx,dy)||.01;if(d<16){const s=(16-d)/2/d;A.x-=dx*s;A.y-=dy*s;B.x+=dx*s;B.y+=dy*s}}
+  Lq.forEach(p=>{p.x=Math.min(392,Math.max(28,p.x));p.y=Math.min(272,Math.max(top,p.y))});
   P.forEach(p=>{const l=p.i<n;
-   if(l){if(!p.l){p.l=1;p.vx*=.3;p.vy*=.3}p.vx+=(Math.random()-.5)*(c?.7:1.1);p.vy+=(Math.random()-.5)*(c?.7:1.1)+.25;p.vx*=.88;p.vy*=.88;p.x+=p.vx;p.y+=p.vy;if(p.y<top)p.vy+=.5}
-   else{if(p.l){p.l=0;const a=Math.random()*6.28;p.vx=Math.cos(a)*2.5;p.vy=Math.sin(a)*2.5}p.x+=p.vx*(c?.8:1.4);p.y+=p.vy*(c?.8:1.4);if(p.x<30||p.x>390)p.vx*=-1;if(p.y<30||p.y>270)p.vy*=-1;p.x=Math.min(392,Math.max(28,p.x));p.y=Math.min(272,Math.max(28,p.y))}
-   x.beginPath();x.arc(p.x,p.y,6,0,7);x.fillStyle=l?col:'#e07a1f';x.globalAlpha=l?.9:.75;x.fill();x.globalAlpha=1});
+   if(l){if(!p.l){p.l=1;p.vx*=.3;p.vy*=.3}p.a=(p.a||0)+(Math.random()-.5)*.8;const k=c?.35:.5;p.vx+=Math.cos(p.a)*k+(Math.random()-.5)*.5;p.vy+=Math.sin(p.a)*k*.5+(Math.random()-.5)*.5+.2;p.vx*=.8;p.vy*=.8;p.x+=p.vx;p.y+=p.vy;if(p.y>=top)p.s=1;if(p.s&&p.y<top){p.y=top;if(p.vy<0)p.vy=0}else if(p.y<top)p.vy+=1}
+   else{if(p.l){p.l=0;p.s=0;const a=Math.random()*6.28;p.vx=Math.cos(a)*2.5;p.vy=Math.sin(a)*2.5}p.x+=p.vx*(c?.8:1.4);p.y+=p.vy*(c?.8:1.4);if(p.x<30||p.x>390)p.vx*=-1;if(p.y<30||p.y>270)p.vy*=-1;p.x=Math.min(392,Math.max(28,p.x));p.y=Math.min(272,Math.max(28,p.y))}
+   x.beginPath();x.arc(p.x,p.y,6,0,7);x.fillStyle='#5ec4f0';x.fill();x.strokeStyle='#2b8cc0';x.lineWidth=1;x.stroke()});
   raf=requestAnimationFrame(frame)}
  cancelAnimationFrame(raf);frame()}
 function startSimTable(m){$('tb').innerHTML=meas[m].map(r=>`<tr><td>${r[0]}</td><td>${r[1]}°C</td><td>${M.toFixed(1)} g</td></tr>`).join('')}
