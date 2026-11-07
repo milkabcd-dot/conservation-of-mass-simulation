@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>מעבדת מדידה – האם עיבוי ורתיחה משנים את המסה?</title>
+<style>
+:root{--bg:#eef4f3;--card:#fff;--ink:#17323a;--mut:#5b7479;--acc:#0f7b8a;--acc2:#e07a1f;--ok:#2e8b57;--bad:#c0392b;--line:#cfe0e0;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1c20;--card:#17292e;--ink:#e6f1f2;--mut:#9ab4b8;--acc:#4fc3d4;--acc2:#f0a05a;--ok:#5cc58a;--bad:#ff7b6b;--line:#2c474d}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Heebo","Assistant",Arial,sans-serif;line-height:1.6}
+.wrap{max-width:760px;margin:0 auto;padding:16px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.9rem;color:var(--mut)}
+.bar{height:6px;background:var(--line);border-radius:3px;margin:10px 0 16px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .3s}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+h1{font-size:1.5rem;margin:0 0 8px}h2{font-size:1.25rem;margin:0 0 10px}
+.opt{display:block;width:100%;text-align:right;padding:12px 14px;margin:8px 0;border:2px solid var(--line);border-radius:10px;background:transparent;color:var(--ink);font:inherit;cursor:pointer}
+.opt:hover{border-color:var(--acc)}.opt.sel{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent)}
+.opt.ok{border-color:var(--ok)}.opt.no{border-color:var(--bad)}
+.nav{display:flex;justify-content:space-between;gap:10px;margin-top:14px}
+button.b{font:inherit;padding:10px 22px;border-radius:10px;border:0;background:var(--acc);color:#fff;cursor:pointer;font-weight:600}
+button.b.g{background:transparent;color:var(--ink);border:2px solid var(--line)}
+button.b:disabled{opacity:.4;cursor:not-allowed}
+button:focus-visible,input:focus-visible{outline:3px solid var(--acc2);outline-offset:2px}
+.lab{display:grid;grid-template-columns:1fr 150px;gap:14px;align-items:end}
+canvas{width:100%;height:auto;background:color-mix(in srgb,var(--acc) 6%,var(--card));border:1px solid var(--line);border-radius:10px}
+.scale{border:2px solid var(--ink);border-radius:10px;padding:10px;text-align:center}
+.scale .n{font-size:1.6rem;font-weight:700;direction:ltr;font-variant-numeric:tabular-nums}
+.scale small{color:var(--mut)}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.95rem}
+th,td{border-bottom:1px solid var(--line);padding:6px;text-align:center}
+input[type=range]{width:100%;accent-color:var(--acc2)}
+.note{background:color-mix(in srgb,var(--acc2) 14%,transparent);border-radius:10px;padding:10px 12px;margin-top:10px}
+.fb{margin-top:8px;font-weight:600}
+footer{text-align:center;color:var(--mut);margin-top:18px;font-size:.9rem}
+@media(max-width:560px){.lab{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+ <div class="top"><button class="b g" id="snd" style="padding:4px 12px">🔊 צלילים פועלים</button><span id="stepTxt"></span></div>
+ <div class="bar"><i id="prog"></i></div>
+ <div class="card" id="stage"></div>
+ <div class="nav"><button class="b g" id="back">חזרה</button><button class="b" id="next">המשך</button></div>
+ <footer>נוצר על ידי: מילכה ברקו גרש</footer>
+</div>
+<script>
+const M=152.4;let step=0,sound=true,pred={1:null,3:null},meas={c:[],b:[]},frac=0,ac=null;
+const $=id=>document.getElementById(id);
+function beep(f,d){if(!sound)return;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;g.gain.value=.06;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
+$('snd').onclick=()=>{sound=!sound;$('snd').textContent=sound?'🔊 צלילים פועלים':'🔇 צלילים כבויים';beep(600,.1)};
+const opts=[['grows','המסה גדלה'],['shrinks','המסה קטנה'],['same','המסה נשארת זהה']];
+function predView(k,q){return `<h2>${q}</h2>${opts.map(o=>`<button class="opt ${pred[k]===o[0]?'sel':''}" data-k="${k}" data-v="${o[0]}">${o[1]}</button>`).join('')}<p class="fb" id="fb"></p>`}
+const steps=[
+()=>`<h1>האם עיבוי ורתיחה משנים את המסה?</h1>
+<p>במעבדה מתכוננים לשני ניסויים. בכל ניסוי הכלי <b>אטום לגמרי</b>, והוא מונח על מאזניים מדוייקים. החומר בתוכו הוא מים.</p>
+<p><b>ניסוי א׳ – עיבוי:</b> בכלי יש אדי מים (גז). מקררים אותו, והאדים הופכים לטיפות מים במצב נוזל.</p>
+<p><b>ניסוי ב׳ – רתיחה:</b> בכלי יש מים נוזליים. מחממים אותם עד שהם רותחים והופכים לאדים: מים במצב גז.</p>
+<div class="note">שאלת החקר: מה קורה למסת הגז כשהוא עובר עיבוי? ומה קורה למסת הנוזל כשהוא עובר רתיחה?</div>`,
+()=>predView(1,'ניבוי לניסוי א׳: כשהגז עובר עיבוי ונהפך לנוזל, מה יקרה למסה שמראים המאזניים?'),
+()=>sim('c'),
+()=>predView(3,'ניבוי לניסוי ב׳: כשהנוזל רותח ונהפך לגז, מה יקרה למסה שמראים המאזניים?'),
+()=>sim('b'),
+()=>`<h2>סיכום המסקנות</h2>
+<table><tr><th>ניסוי</th><th>מסה לפני</th><th>מסה אחרי</th></tr>
+<tr><td>עיבוי</td><td>${M} גרם</td><td>${M} גרם</td></tr><tr><td>רתיחה</td><td>${M} גרם</td><td>${M} גרם</td></tr></table>
+<p>בעיבוי ובהרתחה החלקיקים לא נעלמים ולא נוספים. הם רק משנים את המרחקים ביניהם ואת אופן התנועה שלהם. לכן <b>המסה נשמרת</b>.</p>
+<div class="note"><b>למה לפעמים נדמה שהמסה קטנה?</b> אם מרתיחים בכלי פתוח, האדים בורחים לאוויר והמאזניים מראים פחות. החלקיקים לא נעלמו, הם עזבו את הכלי. בכלי אטום אין לאן לברוח.</div>
+<p>מה דעתך: איך היית מוכיח זאת בניסוי עם כלי פתוח?</p>`
+];
+function sim(m){const c=m==='c';return `<h2>${c?'ניסוי א׳: עיבוי של אדי מים':'ניסוי ב׳: רתיחה של מים'}</h2>
+<p>${c?'הזיזו את המחוון כדי לקרר את הכלי. שימו לב למה קורה לטמפרטורה בזמן שהאדים מתעבים.':'הזיזו את המחוון כדי לחמם את הכלי. שימו לב למה קורה לטמפרטורה בזמן שהמים רותחים.'} לחצו על ״מדידה״ בכל שלב ורשמו את קריאת המאזניים.</p>
+<div class="lab"><canvas id="cv" width="420" height="300" aria-label="כלי אטום עם חלקיקי מים"></canvas>
+<div class="scale"><small>מאזניים</small><div class="n" id="wt">${M.toFixed(1)} g</div><small id="ph"></small></div></div>
+<label>טמפרטורה: <b id="tv" style="direction:ltr;display:inline-block;font-variant-numeric:tabular-nums">${c?110:90}°C</b><input type="range" id="sl" min="0" max="100" value="0"></label>
+<button class="b" id="meas" style="margin-top:8px">מדידה</button>
+<table><thead><tr><th>מצב החומר</th><th>טמפרטורה</th><th>מסה</th></tr></thead><tbody id="tb"></tbody></table>
+<p class="fb" id="fb"></p>`}
+let raf,P=[];
+function startSim(m){const c=m==='c',cv=$('cv'),x=cv.getContext('2d'),sl=$('sl');
+ P=Array.from({length:60},(_,i)=>({i,x:60+Math.random()*300,y:40+Math.random()*180,vx:(Math.random()-.5)*4,vy:(Math.random()-.5)*4}));
+ if(!c)P.forEach(p=>{p.y=210+Math.random()*60;p.l=1;p.vx=p.vy=0});const L=meas[m];$('tb').innerHTML=L.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}°C</td><td>${M.toFixed(1)} g</td></tr>`).join('');
+ const col=getComputedStyle(document.documentElement).getPropertyValue('--acc').trim(),ink=getComputedStyle(document.documentElement).getPropertyValue('--ink').trim();
+ function liq(){const v=+sl.value;if(c)return v<=35?0:v<=65?(v-35)/30:1;return v<=35?1:v<=65?1-(v-35)/30:0}
+ function temp(){const v=+sl.value;let t;if(v<=35)t=10*v/35;else if(v<=65)t=10;else t=10+10*(v-65)/35;return Math.round(c?110-t:90+t)}
+ function label(){const f=liq();return f>.97?'נוזל':f<.03?'גז':(c?'עיבוי: נוזל וגז':'רתיחה: נוזל וגז')}
+ let last=-1;
+ sl.oninput=()=>{const f=liq();$('ph').textContent=label();$('tv').textContent=temp()+'°C';if(Math.abs(f*10|0)!==last){last=f*10|0;beep(300+f*500,.05)}};
+ sl.oninput();
+ $('meas').onclick=()=>{meas[m].push([label(),temp()]);beep(800,.12);startSimTable(m);
+  if(meas[m].length>=3)$('fb').textContent='המסה נשארה '+M.toFixed(1)+' גרם בכל המדידות, בכל מצב צבירה.'};
+ function frame(){x.clearRect(0,0,420,300);x.strokeStyle=ink;x.lineWidth=3;x.strokeRect(20,20,380,260);
+  const n=Math.round(liq()*P.length);const top=272-n*400/364;const Lq=P.filter(p=>p.i<n);
+  for(let k=0;k<2;k++)for(let a=0;a<Lq.length;a++)for(let b=a+1;b<Lq.length;b++){const A=Lq[a],B=Lq[b];const dx=B.x-A.x,dy=B.y-A.y,d=Math.hypot(dx,dy)||.01;if(d<16){const s=(16-d)/2/d;A.x-=dx*s;A.y-=dy*s;B.x+=dx*s;B.y+=dy*s}}
+  Lq.forEach(p=>{p.x=Math.min(392,Math.max(28,p.x));p.y=Math.min(272,Math.max(28,p.y))});
+  P.forEach(p=>{const l=p.i<n;
+   if(l){if(!p.l){p.l=1;p.vx*=.3;p.vy*=.3}p.vx+=(Math.random()-.5)*(c?.7:1.1);p.vy+=(Math.random()-.5)*(c?.7:1.1)+.25;p.vx*=.88;p.vy*=.88;p.x+=p.vx;p.y+=p.vy;if(p.y<top)p.vy+=.5}
+   else{if(p.l){p.l=0;const a=Math.random()*6.28;p.vx=Math.cos(a)*2.5;p.vy=Math.sin(a)*2.5}p.x+=p.vx*(c?.8:1.4);p.y+=p.vy*(c?.8:1.4);if(p.x<30||p.x>390)p.vx*=-1;if(p.y<30||p.y>270)p.vy*=-1;p.x=Math.min(392,Math.max(28,p.x));p.y=Math.min(272,Math.max(28,p.y))}
+   x.beginPath();x.arc(p.x,p.y,6,0,7);x.fillStyle=l?col:'#e07a1f';x.globalAlpha=l?.9:.75;x.fill();x.globalAlpha=1});
+  raf=requestAnimationFrame(frame)}
+ cancelAnimationFrame(raf);frame()}
+function startSimTable(m){$('tb').innerHTML=meas[m].map(r=>`<tr><td>${r[0]}</td><td>${r[1]}°C</td><td>${M.toFixed(1)} g</td></tr>`).join('')}
+function render(){cancelAnimationFrame(raf);$('stage').innerHTML=steps[step]();
+ $('prog').style.width=((step+1)/steps.length*100)+'%';$('stepTxt').textContent=`שלב ${step+1} מתוך ${steps.length}`;
+ $('back').disabled=step===0;$('next').textContent=step===steps.length-1?'מההתחלה':'המשך';
+ $('next').disabled=(step===1&&!pred[1])||(step===3&&!pred[3])||(step===2&&meas.c.length<3)||(step===4&&meas.b.length<3);
+ document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{const k=b.dataset.k;pred[k]=b.dataset.v;
+  document.querySelectorAll('.opt').forEach(o=>{o.classList.remove('sel','ok','no')});
+  b.classList.add('sel');$('fb').textContent='הניבוי נרשם. נבדוק אותו בניסוי.';beep(500,.1);$('next').disabled=false});
+ if(step===2)startSim('c');if(step===4)startSim('b');
+ if(step===2||step===4){const m=step===2?'c':'b';const t=setInterval(()=>{if(!$('meas')){clearInterval(t);return}$('next').disabled=meas[m].length<3},300)}}
+$('next').onclick=()=>{if(step===steps.length-1){step=0;pred={1:null,3:null};meas={c:[],b:[]}}else step++;beep(520,.08);render()};
+$('back').onclick=()=>{if(step>0){step--;render()}};
+render();
+</script>
+</body>
+</html>
